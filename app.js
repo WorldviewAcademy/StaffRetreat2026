@@ -1,6 +1,6 @@
 // Google Sheets Configuration
 // Replace these with your actual Google Sheets details after setup
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbytovQMxhxe9O5-zQiA_U2jM1fXH2ZuHtT5YuJWxib82tu5ylHhfrlDoYuvTJhDbsDP1w/exec';
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxAiQH19qU5z_kKxgNzoqD9_AazEw3ZJ4e-CoLzYFPbJcxRNoxbXCOZOriU0485F2Djrg/exec';
 
 // State
 let allAttendees = [];
