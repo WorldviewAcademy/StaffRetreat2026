@@ -24,18 +24,117 @@ This website allows past staff members to register their interest or commitment 
 2. Delete any existing code and paste the following:
 
 ```javascript
+// Validation functions
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function sanitizeString(str, maxLength) {
+  if (typeof str !== 'string') return '';
+  return str.trim().substring(0, maxLength);
+}
+
+function isValidYear(year) {
+  // Allow comma-separated years like "2018, 2019, 2020"
+  const years = year.split(',').map(y => y.trim());
+  return years.every(y => /^\d{4}$/.test(y) && parseInt(y) >= 2000 && parseInt(y) <= 2030);
+}
+
+function isValidState(state) {
+  const validStates = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','DC','WV','WI','WY','AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'];
+  return validStates.includes(state.toUpperCase());
+}
+
+// Rate limiting using PropertiesService
+function checkRateLimit(email) {
+  const props = PropertiesService.getScriptProperties();
+  const key = 'ratelimit_' + email;
+  const now = Date.now();
+  const lastSubmission = props.getProperty(key);
+
+  // Allow one submission per email every 30 seconds
+  if (lastSubmission && (now - parseInt(lastSubmission)) < 30000) {
+    return false;
+  }
+
+  props.setProperty(key, now.toString());
+  return true;
+}
+
 function doPost(e) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = JSON.parse(e.postData.contents);
 
-    // Check if email already exists
+    // Input validation
+    if (!data.email || !isValidEmail(data.email)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Invalid email address'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!data.name || data.name.length < 2) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Name is required'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!data.year || !isValidYear(data.year)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Invalid year format'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!data.state || !isValidState(data.state)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Invalid state/province'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!data.city || data.city.length < 2) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'City is required'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (!['interested', 'committed', 'not-going'].includes(data.status)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Invalid status'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Rate limiting
+    if (!checkRateLimit(data.email)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Please wait before submitting again'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Sanitize inputs
+    const sanitizedData = {
+      email: sanitizeString(data.email, 100).toLowerCase(),
+      name: sanitizeString(data.name, 100),
+      year: sanitizeString(data.year, 50),
+      state: sanitizeString(data.state, 10).toUpperCase(),
+      city: sanitizeString(data.city, 100),
+      status: data.status,
+      timestamp: new Date().toISOString()
+    };
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const allData = sheet.getDataRange().getValues();
     let existingRowIndex = -1;
 
-    for (let i = 1; i < allData.length; i++) { // Start at 1 to skip header
-      if (allData[i][1] === data.email) { // Column B (index 1) is email
-        existingRowIndex = i + 1; // Sheet rows are 1-indexed
+    // Check if email already exists
+    for (let i = 1; i < allData.length; i++) {
+      if (allData[i][1] === sanitizedData.email) {
+        existingRowIndex = i + 1;
         break;
       }
     }
@@ -43,24 +142,24 @@ function doPost(e) {
     if (existingRowIndex > 0) {
       // Update existing row
       sheet.getRange(existingRowIndex, 1, 1, 7).setValues([[
-        data.timestamp,
-        data.email,
-        data.name,
-        data.year,
-        data.state,
-        data.city,
-        data.status
+        sanitizedData.timestamp,
+        sanitizedData.email,
+        sanitizedData.name,
+        sanitizedData.year,
+        sanitizedData.state,
+        sanitizedData.city,
+        sanitizedData.status
       ]]);
     } else {
       // Append new row
       sheet.appendRow([
-        data.timestamp,
-        data.email,
-        data.name,
-        data.year,
-        data.state,
-        data.city,
-        data.status
+        sanitizedData.timestamp,
+        sanitizedData.email,
+        sanitizedData.name,
+        sanitizedData.year,
+        sanitizedData.state,
+        sanitizedData.city,
+        sanitizedData.status
       ]);
     }
 
@@ -70,9 +169,10 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
+    Logger.log('Error in doPost: ' + error.toString());
     return ContentService.createTextOutput(JSON.stringify({
       status: 'error',
-      message: error.toString()
+      message: 'An error occurred. Please try again.'
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -82,15 +182,21 @@ function doGet(e) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const params = e.parameter;
 
-    // Handle email lookup
+    // Handle email lookup (only returns data for matching email - keeps email private)
     if (params.action === 'lookup' && params.email) {
-      const data = sheet.getDataRange().getValues();
+      if (!isValidEmail(params.email)) {
+        return ContentService.createTextOutput(JSON.stringify({
+          attendee: null
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
 
-      for (let i = 1; i < data.length; i++) { // Skip header row
-        if (data[i][1] === params.email) { // Column B is email
+      const data = sheet.getDataRange().getValues();
+      const sanitizedEmail = params.email.trim().toLowerCase();
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][1] === sanitizedEmail) {
           return ContentService.createTextOutput(JSON.stringify({
             attendee: {
-              timestamp: data[i][0],
               email: data[i][1],
               name: data[i][2],
               year: data[i][3],
@@ -102,19 +208,15 @@ function doGet(e) {
         }
       }
 
-      // Email not found
       return ContentService.createTextOutput(JSON.stringify({
         attendee: null
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Default: return all attendees
+    // Default: return all attendees WITHOUT emails (security improvement)
     const data = sheet.getDataRange().getValues();
 
-    // Skip header row
     const attendees = data.slice(1).map(row => ({
-      timestamp: row[0],
-      email: row[1],
       name: row[2],
       year: row[3],
       state: row[4],
@@ -127,6 +229,7 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
+    Logger.log('Error in doGet: ' + error.toString());
     return ContentService.createTextOutput(JSON.stringify({
       attendees: []
     })).setMimeType(ContentService.MimeType.JSON);
@@ -161,6 +264,14 @@ function doGet(e) {
 - Users can update their information by returning to the site - their email is saved in browser localStorage and their data will be pre-filled.
 - The system automatically updates existing entries when someone submits with the same email address.
 - Three status options are available: "Not Going", "Interested", and "Committed".
+
+**Security Features:**
+- ✅ Email addresses are NOT exposed in the public API (only visible to you in the Google Sheet)
+- ✅ Rate limiting: One submission per email every 30 seconds
+- ✅ Input validation: Email format, year format, state codes, name/city length
+- ✅ Input sanitization: All data is trimmed and length-limited
+- ✅ Error messages don't expose internal details
+- ✅ XSS protection: HTML escaping on frontend display
 
 ## GitHub Pages Setup
 
@@ -246,12 +357,30 @@ In `app.js`, you can remove or modify the `loadDemoData()` function once your Go
 - **Removing duplicates**: Delete rows in the Google Sheet
 - **Backing up**: File > Download in Google Sheets
 
-## Security Notes
+## Security & Privacy
 
-- The Google Sheet is read-only through the web app
-- Anyone can submit data (by design)
-- To prevent spam, you could add Google reCAPTCHA
-- To restrict access, change deployment permissions in Apps Script
+### What's Protected:
+- ✅ **Email addresses are private** - Not exposed in public API, only you can see them in your Google Sheet
+- ✅ **Rate limiting** - Prevents spam (30-second cooldown per email)
+- ✅ **Input validation** - All data is validated and sanitized before saving
+- ✅ **XSS protection** - HTML escaping prevents script injection
+- ✅ **HTTPS enforced** - All communication is encrypted
+- ✅ **Google Sheet access** - Only your account can directly access the sheet
+
+### What's Public (By Design):
+- Names, years served, city, state, and status are visible to anyone visiting the site
+- This is intentional for a staff retreat where people want to see who's attending
+
+### Deployment Security:
+- The Google Sheet itself is private to your account
+- The Apps Script runs as you and can only modify this specific spreadsheet
+- "Anyone" access means anyone can use the API endpoints (read attendee list, submit forms)
+- They CANNOT access your Google Drive, email, or other personal data
+
+### Additional Protection (Optional):
+- Add Google reCAPTCHA to prevent bots
+- Change deployment to "Anyone with the link" instead of "Anyone" (requires users to know the URL)
+- Set up email notifications when new entries are added
 
 ## Need Help?
 

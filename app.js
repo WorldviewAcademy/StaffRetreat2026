@@ -24,12 +24,14 @@ function setupEventListeners() {
     const refreshBtn = document.getElementById('refresh-btn');
     const submitAsDifferent = document.getElementById('submit-as-different');
     const mapYearFilter = document.getElementById('map-year-filter');
+    const editSubmissionBtn = document.getElementById('edit-submission-btn');
 
     form.addEventListener('submit', handleFormSubmit);
     yearFilter.addEventListener('change', filterAttendees);
     refreshBtn.addEventListener('click', loadAttendees);
     submitAsDifferent.addEventListener('click', clearSavedEmail);
     mapYearFilter.addEventListener('change', updateMapMarkers);
+    editSubmissionBtn.addEventListener('click', showForm);
 }
 
 // Check for existing submission
@@ -38,7 +40,24 @@ function checkForExistingSubmission() {
     if (savedEmail) {
         document.getElementById('email').value = savedEmail;
         loadUserData(savedEmail);
+        hideForm(); // Hide form initially if user has already submitted
     }
+}
+
+// Show form for editing
+function showForm() {
+    document.getElementById('form-container').style.display = 'block';
+    document.getElementById('submitted-notice').style.display = 'none';
+    document.getElementById('update-mode-notice').style.display = 'block';
+    document.getElementById('form-title').textContent = 'Update Your Information';
+    document.getElementById('submit-btn').textContent = 'Update Info';
+}
+
+// Hide form after submission
+function hideForm() {
+    document.getElementById('form-container').style.display = 'none';
+    document.getElementById('submitted-notice').style.display = 'block';
+    document.getElementById('form-title').textContent = 'Your Submission';
 }
 
 // Load user's existing data
@@ -50,9 +69,6 @@ async function loadUserData(email) {
         if (data.attendee) {
             // User exists, populate form
             isUpdateMode = true;
-            document.getElementById('form-title').textContent = 'Update Your Information';
-            document.getElementById('update-mode-notice').style.display = 'block';
-            document.getElementById('submit-btn').textContent = 'Update Info';
 
             // Pre-fill form
             document.getElementById('name').value = data.attendee.name || '';
@@ -74,6 +90,8 @@ function clearSavedEmail(e) {
     isUpdateMode = false;
     document.getElementById('form-title').textContent = 'Register Your Interest';
     document.getElementById('update-mode-notice').style.display = 'none';
+    document.getElementById('submitted-notice').style.display = 'none';
+    document.getElementById('form-container').style.display = 'block';
     document.getElementById('submit-btn').textContent = 'Submit';
     document.getElementById('interest-form').reset();
 }
@@ -115,13 +133,13 @@ async function handleFormSubmit(e) {
         // Save email to localStorage
         localStorage.setItem('staffRetreatEmail', email);
 
-        // Switch to update mode if not already
-        if (!isUpdateMode) {
-            isUpdateMode = true;
-            document.getElementById('form-title').textContent = 'Update Your Information';
-            document.getElementById('update-mode-notice').style.display = 'block';
-            document.getElementById('submit-btn').textContent = 'Update Info';
-        }
+        // Mark as update mode
+        isUpdateMode = true;
+
+        // Hide form after successful submission
+        setTimeout(() => {
+            hideForm();
+        }, 2000);
 
         // Reload attendees after a short delay
         setTimeout(() => {
@@ -271,13 +289,14 @@ function escapeHtml(text) {
 }
 
 // Demo Data (for testing without Google Sheets)
+// Note: Demo data includes emails for local testing, but real API doesn't expose them
 function loadDemoData() {
     allAttendees = [
-        { email: 'john@example.com', name: 'John Doe', year: '2018, 2019', city: 'Denver', state: 'CO', status: 'interested' },
-        { email: 'jane@example.com', name: 'Jane Smith', year: '2019', city: 'Austin', state: 'TX', status: 'committed' },
-        { email: 'mike@example.com', name: 'Mike Johnson', year: '2018, 2020', city: 'Seattle', state: 'WA', status: 'committed' },
-        { email: 'sarah@example.com', name: 'Sarah Williams', year: '2020', city: 'Portland', state: 'OR', status: 'not-going' },
-        { email: 'tom@example.com', name: 'Tom Brown', year: '2019, 2021', city: 'Boston', state: 'MA', status: 'interested' }
+        { name: 'John Doe', year: '2018, 2019', city: 'Denver', state: 'CO', status: 'interested' },
+        { name: 'Jane Smith', year: '2019', city: 'Austin', state: 'TX', status: 'committed' },
+        { name: 'Mike Johnson', year: '2018, 2020', city: 'Seattle', state: 'WA', status: 'committed' },
+        { name: 'Sarah Williams', year: '2020', city: 'Portland', state: 'OR', status: 'not-going' },
+        { name: 'Tom Brown', year: '2019, 2021', city: 'Boston', state: 'MA', status: 'interested' }
     ];
 
     // Extract unique years (handling comma-separated years)
@@ -299,13 +318,26 @@ function loadDemoData() {
 
 // Initialize Map
 function initializeMap() {
-    map = L.map('map').setView([45, -100], 4); // Center on North America
+    // Define bounds for USA and Canada
+    const bounds = [
+        [15, -170], // Southwest coordinates (includes Hawaii and Alaska)
+        [75, -50]   // Northeast coordinates (includes northern Canada)
+    ];
+
+    map = L.map('map', {
+        center: [45, -100],
+        zoom: 4,
+        minZoom: 3,
+        maxBounds: bounds,
+        maxBoundsViscosity: 1.0 // Makes it hard to drag outside bounds
+    });
 
     // CartoDB Dark Matter style - modern and sleek
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
-        maxZoom: 20
+        maxZoom: 20,
+        minZoom: 3
     }).addTo(map);
 }
 
@@ -419,7 +451,7 @@ function updateMapMarkers() {
     filtered.forEach(attendee => {
         const coords = geocodeLocation(attendee.city, attendee.state);
         if (coords) {
-            const color = attendee.status === 'committed' ? '#00ff00' : '#00bfff';
+            const color = attendee.status === 'committed' ? '#006F44' : '#004A87';
 
             const marker = L.circleMarker([coords.lat, coords.lng], {
                 radius: 8,

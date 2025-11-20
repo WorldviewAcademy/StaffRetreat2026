@@ -12,6 +12,7 @@
 <body>
     <div class="container">
         <header>
+            <img src="Black W Icon Branding.png" alt="Worldview Academy Logo" class="logo">
             <h1>Staff Retreat Interest Tracker</h1>
             <p>Sign up to show your interest or commitment, and see who else is planning to attend!</p>
         </header>
@@ -19,11 +20,20 @@
         <!-- Interest Form Section -->
         <section class="form-section">
             <h2 id="form-title">Register Your Interest</h2>
-            <div id="update-mode-notice" class="update-notice" style="display: none;">
-                <p>Welcome back! Update your information below.</p>
+
+            <!-- Already Submitted Notice -->
+            <div id="submitted-notice" class="submitted-notice" style="display: none;">
+                <p>✓ You've already submitted your information!</p>
+                <button id="edit-submission-btn" class="btn-secondary">Edit My Submission</button>
                 <a href="#" id="submit-as-different" class="link-button">Submit as a different person</a>
             </div>
-            <form id="interest-form">
+
+            <!-- Form Container -->
+            <div id="form-container">
+                <div id="update-mode-notice" class="update-notice" style="display: none;">
+                    <p>Update your information below.</p>
+                </div>
+                <form id="interest-form">
                 <div class="form-group">
                     <label for="email">Email *</label>
                     <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
@@ -132,8 +142,34 @@
                 </div>
 
                 <button type="submit" class="btn-primary" id="submit-btn">Submit</button>
-            </form>
-            <div id="form-message" class="message"></div>
+                </form>
+                <div id="form-message" class="message"></div>
+            </div>
+        </section>
+
+        <!-- Map Section -->
+        <section class="map-section">
+            <h2>Where Everyone's Coming From</h2>
+
+            <div class="map-controls">
+                <label for="map-year-filter">Filter Map by Year:</label>
+                <select id="map-year-filter">
+                    <option value="all">All Years</option>
+                </select>
+            </div>
+
+            <div class="map-legend">
+                <div class="legend-item">
+                    <span class="legend-dot blue"></span>
+                    <span>Interested</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot green"></span>
+                    <span>Committed</span>
+                </div>
+            </div>
+
+            <div id="map" class="map-container"></div>
         </section>
 
         <!-- View Attendees Section -->
@@ -163,31 +199,6 @@
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Map Section -->
-        <section class="map-section">
-            <h2>Where Everyone's Coming From</h2>
-
-            <div class="map-controls">
-                <label for="map-year-filter">Filter Map by Year:</label>
-                <select id="map-year-filter">
-                    <option value="all">All Years</option>
-                </select>
-            </div>
-
-            <div class="map-legend">
-                <div class="legend-item">
-                    <span class="legend-dot blue"></span>
-                    <span>Interested</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-dot green"></span>
-                    <span>Committed</span>
-                </div>
-            </div>
-
-            <div id="map" class="map-container"></div>
         </section>
     </div>
 
