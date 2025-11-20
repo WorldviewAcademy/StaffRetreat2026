@@ -245,6 +245,35 @@ function filterAttendees() {
     displayAttendeeList('committed-list', committed);
 }
 
+// Format years into ranges (e.g., "2001-2004, 2006-2009")
+function formatYears(yearString) {
+    if (!yearString) return '';
+
+    const years = yearString.split(',').map(y => parseInt(y.trim())).sort((a, b) => a - b);
+    if (years.length === 0) return '';
+
+    const ranges = [];
+    let rangeStart = years[0];
+    let rangeEnd = years[0];
+
+    for (let i = 1; i < years.length; i++) {
+        if (years[i] === rangeEnd + 1) {
+            // Consecutive year, extend range
+            rangeEnd = years[i];
+        } else {
+            // Gap found, push current range and start new one
+            ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+            rangeStart = years[i];
+            rangeEnd = years[i];
+        }
+    }
+
+    // Push final range
+    ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+
+    return ranges.join(', ');
+}
+
 // Display Attendee List
 function displayAttendeeList(elementId, attendees) {
     const container = document.getElementById(elementId);
@@ -261,7 +290,7 @@ function displayAttendeeList(elementId, attendees) {
         <div class="attendee-card">
             <div class="name">${escapeHtml(attendee.name)}</div>
             <div class="details">
-                <span class="year">${escapeHtml(attendee.year)}</span>
+                <span class="year">${escapeHtml(formatYears(attendee.year))}</span>
                 ${escapeHtml(attendee.city)}, ${escapeHtml(attendee.state)}
             </div>
         </div>
