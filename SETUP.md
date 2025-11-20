@@ -37,7 +37,7 @@ function sanitizeString(str, maxLength) {
 function isValidYear(year) {
   // Allow comma-separated years like "2018, 2019, 2020"
   const years = year.split(',').map(y => y.trim());
-  return years.every(y => /^\d{4}$/.test(y) && parseInt(y) >= 2000 && parseInt(y) <= 2030);
+  return years.every(y => /^\d{4}$/.test(y) && parseInt(y) >= 1996 && parseInt(y) <= 2026);
 }
 
 function isValidState(state) {

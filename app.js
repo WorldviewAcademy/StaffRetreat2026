@@ -127,7 +127,7 @@ async function handleFormSubmit(e) {
         // With no-cors, we can't read the response, so we assume success
         const successMessage = isUpdateMode ?
             'Successfully updated! Refreshing list...' :
-            'Successfully registered! Refreshing list...';
+            'Successfully submitted! Refreshing list...';
         showMessage(successMessage, 'success');
 
         // Save email to localStorage
