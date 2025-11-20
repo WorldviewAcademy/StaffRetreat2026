@@ -30,7 +30,8 @@ async function handleFormSubmit(e) {
     const formData = {
         name: document.getElementById('name').value.trim(),
         year: document.getElementById('year').value.trim(),
-        location: document.getElementById('location').value.trim(),
+        state: document.getElementById('state').value,
+        city: document.getElementById('city').value.trim(),
         status: document.getElementById('status').value,
         timestamp: new Date().toISOString()
     };
@@ -73,8 +74,19 @@ async function loadAttendees() {
 
         allAttendees = data.attendees || [];
 
-        // Extract unique years
-        years = new Set(allAttendees.map(a => a.year));
+        // Extract unique years (handling comma-separated years)
+        years = new Set();
+        allAttendees.forEach(a => {
+            if (a.year) {
+                // Split by comma and add each year
+                a.year.split(',').forEach(year => {
+                    const trimmedYear = year.trim();
+                    if (trimmedYear) {
+                        years.add(trimmedYear);
+                    }
+                });
+            }
+        });
         populateYearFilter();
 
         // Display attendees
@@ -116,7 +128,12 @@ function filterAttendees() {
 
     let filtered = allAttendees;
     if (selectedYear !== 'all') {
-        filtered = allAttendees.filter(a => a.year === selectedYear);
+        // Filter attendees who have the selected year in their comma-separated years
+        filtered = allAttendees.filter(a => {
+            if (!a.year) return false;
+            const years = a.year.split(',').map(y => y.trim());
+            return years.includes(selectedYear);
+        });
     }
 
     // Separate by status
@@ -145,7 +162,7 @@ function displayAttendeeList(elementId, attendees) {
             <div class="name">${escapeHtml(attendee.name)}</div>
             <div class="details">
                 <span class="year">${escapeHtml(attendee.year)}</span>
-                ${escapeHtml(attendee.location)}
+                ${escapeHtml(attendee.city)}, ${escapeHtml(attendee.state)}
             </div>
         </div>
     `).join('');
@@ -174,14 +191,25 @@ function escapeHtml(text) {
 // Demo Data (for testing without Google Sheets)
 function loadDemoData() {
     allAttendees = [
-        { name: 'John Doe', year: '2018', location: 'Denver, CO', status: 'interested' },
-        { name: 'Jane Smith', year: '2019', location: 'Austin, TX', status: 'committed' },
-        { name: 'Mike Johnson', year: '2018', location: 'Seattle, WA', status: 'committed' },
-        { name: 'Sarah Williams', year: '2020', location: 'Portland, OR', status: 'interested' },
-        { name: 'Tom Brown', year: '2019', location: 'Boston, MA', status: 'interested' }
+        { name: 'John Doe', year: '2018, 2019', city: 'Denver', state: 'CO', status: 'interested' },
+        { name: 'Jane Smith', year: '2019', city: 'Austin', state: 'TX', status: 'committed' },
+        { name: 'Mike Johnson', year: '2018, 2020', city: 'Seattle', state: 'WA', status: 'committed' },
+        { name: 'Sarah Williams', year: '2020', city: 'Portland', state: 'OR', status: 'interested' },
+        { name: 'Tom Brown', year: '2019, 2021', city: 'Boston', state: 'MA', status: 'interested' }
     ];
 
-    years = new Set(allAttendees.map(a => a.year));
+    // Extract unique years (handling comma-separated years)
+    years = new Set();
+    allAttendees.forEach(a => {
+        if (a.year) {
+            a.year.split(',').forEach(year => {
+                const trimmedYear = year.trim();
+                if (trimmedYear) {
+                    years.add(trimmedYear);
+                }
+            });
+        }
+    });
     populateYearFilter();
     filterAttendees();
 }
