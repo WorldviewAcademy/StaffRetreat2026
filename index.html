@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Retreat Interest Tracker</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Staff Retreat Interest Tracker</h1>
+            <p>Sign up to show your interest or commitment, and see who else is planning to attend!</p>
+        </header>
+
+        <!-- Interest Form Section -->
+        <section class="form-section">
+            <h2>Register Your Interest</h2>
+            <form id="interest-form">
+                <div class="form-group">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="year">Year Served *</label>
+                    <input type="text" id="year" name="year" placeholder="e.g., 2018" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">City & State *</label>
+                    <input type="text" id="location" name="location" placeholder="e.g., Denver, CO" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="">Select...</option>
+                        <option value="interested">Interested</option>
+                        <option value="committed">Committed</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary">Submit</button>
+            </form>
+            <div id="form-message" class="message"></div>
+        </section>
+
+        <!-- View Attendees Section -->
+        <section class="attendees-section">
+            <h2>Who's Coming?</h2>
+
+            <div class="filter-controls">
+                <label for="year-filter">Filter by Year:</label>
+                <select id="year-filter">
+                    <option value="all">All Years</option>
+                </select>
+                <button id="refresh-btn" class="btn-secondary">Refresh Data</button>
+            </div>
+
+            <div class="attendees-grid">
+                <div class="attendees-column">
+                    <h3>Interested</h3>
+                    <div id="interested-list" class="attendee-list">
+                        <p class="loading">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="attendees-column">
+                    <h3>Committed</h3>
+                    <div id="committed-list" class="attendee-list">
+                        <p class="loading">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
