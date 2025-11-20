@@ -16,8 +16,18 @@
 
         <!-- Interest Form Section -->
         <section class="form-section">
-            <h2>Register Your Interest</h2>
+            <h2 id="form-title">Register Your Interest</h2>
+            <div id="update-mode-notice" class="update-notice" style="display: none;">
+                <p>Welcome back! Update your information below.</p>
+                <a href="#" id="submit-as-different" class="link-button">Submit as a different person</a>
+            </div>
             <form id="interest-form">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+                    <small>We'll use this to let you update your info later</small>
+                </div>
+
                 <div class="form-group">
                     <label for="name">Name *</label>
                     <input type="text" id="name" name="name" required>
@@ -96,12 +106,13 @@
                     <label for="status">Status *</label>
                     <select id="status" name="status" required>
                         <option value="">Select...</option>
+                        <option value="not-going">Not Going</option>
                         <option value="interested">Interested</option>
                         <option value="committed">Committed</option>
                     </select>
                 </div>
 
-                <button type="submit" class="btn-primary">Submit</button>
+                <button type="submit" class="btn-primary" id="submit-btn">Submit</button>
             </form>
             <div id="form-message" class="message"></div>
         </section>
@@ -119,6 +130,13 @@
             </div>
 
             <div class="attendees-grid">
+                <div class="attendees-column">
+                    <h3>Not Going</h3>
+                    <div id="not-going-list" class="attendee-list">
+                        <p class="loading">Loading...</p>
+                    </div>
+                </div>
+
                 <div class="attendees-column">
                     <h3>Interested</h3>
                     <div id="interested-list" class="attendee-list">

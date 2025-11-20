@@ -11,11 +11,12 @@ This website allows past staff members to register their interest or commitment 
 2. Name it "Staff Retreat Attendees" or similar
 3. Create the following column headers in row 1:
    - A1: `Timestamp`
-   - B1: `Name`
-   - C1: `Year`
-   - D1: `State`
-   - E1: `City`
-   - F1: `Status`
+   - B1: `Email`
+   - C1: `Name`
+   - D1: `Year`
+   - E1: `State`
+   - F1: `City`
+   - G1: `Status`
 
 ### Step 2: Create Google Apps Script
 
@@ -28,14 +29,40 @@ function doPost(e) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = JSON.parse(e.postData.contents);
 
-    sheet.appendRow([
-      data.timestamp,
-      data.name,
-      data.year,
-      data.state,
-      data.city,
-      data.status
-    ]);
+    // Check if email already exists
+    const allData = sheet.getDataRange().getValues();
+    let existingRowIndex = -1;
+
+    for (let i = 1; i < allData.length; i++) { // Start at 1 to skip header
+      if (allData[i][1] === data.email) { // Column B (index 1) is email
+        existingRowIndex = i + 1; // Sheet rows are 1-indexed
+        break;
+      }
+    }
+
+    if (existingRowIndex > 0) {
+      // Update existing row
+      sheet.getRange(existingRowIndex, 1, 1, 7).setValues([[
+        data.timestamp,
+        data.email,
+        data.name,
+        data.year,
+        data.state,
+        data.city,
+        data.status
+      ]]);
+    } else {
+      // Append new row
+      sheet.appendRow([
+        data.timestamp,
+        data.email,
+        data.name,
+        data.year,
+        data.state,
+        data.city,
+        data.status
+      ]);
+    }
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
@@ -53,16 +80,46 @@ function doPost(e) {
 function doGet(e) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const params = e.parameter;
+
+    // Handle email lookup
+    if (params.action === 'lookup' && params.email) {
+      const data = sheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) { // Skip header row
+        if (data[i][1] === params.email) { // Column B is email
+          return ContentService.createTextOutput(JSON.stringify({
+            attendee: {
+              timestamp: data[i][0],
+              email: data[i][1],
+              name: data[i][2],
+              year: data[i][3],
+              state: data[i][4],
+              city: data[i][5],
+              status: data[i][6]
+            }
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+
+      // Email not found
+      return ContentService.createTextOutput(JSON.stringify({
+        attendee: null
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Default: return all attendees
     const data = sheet.getDataRange().getValues();
 
     // Skip header row
     const attendees = data.slice(1).map(row => ({
       timestamp: row[0],
-      name: row[1],
-      year: row[2],
-      state: row[3],
-      city: row[4],
-      status: row[5]
+      email: row[1],
+      name: row[2],
+      year: row[3],
+      state: row[4],
+      city: row[5],
+      status: row[6]
     }));
 
     return ContentService.createTextOutput(JSON.stringify({
@@ -99,7 +156,11 @@ function doGet(e) {
 3. Replace `'YOUR_GOOGLE_SHEET_WEB_APP_URL'` with the URL you copied from the Apps Script deployment (keep the quotes)
 4. Save the file
 
-**Note:** The form accepts comma-separated years (e.g., "2018, 2019, 2020") to accommodate staff who served multiple years. The year filter will show staff members who served in any selected year.
+**Important Notes:**
+- The form accepts comma-separated years (e.g., "2018, 2019, 2020") to accommodate staff who served multiple years. The year filter will show staff members who served in any selected year.
+- Users can update their information by returning to the site - their email is saved in browser localStorage and their data will be pre-filled.
+- The system automatically updates existing entries when someone submits with the same email address.
+- Three status options are available: "Not Going", "Interested", and "Committed".
 
 ## GitHub Pages Setup
 

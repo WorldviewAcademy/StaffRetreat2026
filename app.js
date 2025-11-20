@@ -5,9 +5,11 @@ const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbytovQMxhxe9O5
 // State
 let allAttendees = [];
 let years = new Set();
+let isUpdateMode = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    checkForExistingSubmission();
     loadAttendees();
     setupEventListeners();
 });
@@ -17,17 +19,67 @@ function setupEventListeners() {
     const form = document.getElementById('interest-form');
     const yearFilter = document.getElementById('year-filter');
     const refreshBtn = document.getElementById('refresh-btn');
+    const submitAsDifferent = document.getElementById('submit-as-different');
 
     form.addEventListener('submit', handleFormSubmit);
     yearFilter.addEventListener('change', filterAttendees);
     refreshBtn.addEventListener('click', loadAttendees);
+    submitAsDifferent.addEventListener('click', clearSavedEmail);
+}
+
+// Check for existing submission
+function checkForExistingSubmission() {
+    const savedEmail = localStorage.getItem('staffRetreatEmail');
+    if (savedEmail) {
+        document.getElementById('email').value = savedEmail;
+        loadUserData(savedEmail);
+    }
+}
+
+// Load user's existing data
+async function loadUserData(email) {
+    try {
+        const response = await fetch(GOOGLE_SHEET_URL + '?action=lookup&email=' + encodeURIComponent(email));
+        const data = await response.json();
+
+        if (data.attendee) {
+            // User exists, populate form
+            isUpdateMode = true;
+            document.getElementById('form-title').textContent = 'Update Your Information';
+            document.getElementById('update-mode-notice').style.display = 'block';
+            document.getElementById('submit-btn').textContent = 'Update Info';
+
+            // Pre-fill form
+            document.getElementById('name').value = data.attendee.name || '';
+            document.getElementById('year').value = data.attendee.year || '';
+            document.getElementById('state').value = data.attendee.state || '';
+            document.getElementById('city').value = data.attendee.city || '';
+            document.getElementById('status').value = data.attendee.status || '';
+        }
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        // Silently fail - user can still submit
+    }
+}
+
+// Clear saved email and reset form
+function clearSavedEmail(e) {
+    e.preventDefault();
+    localStorage.removeItem('staffRetreatEmail');
+    isUpdateMode = false;
+    document.getElementById('form-title').textContent = 'Register Your Interest';
+    document.getElementById('update-mode-notice').style.display = 'none';
+    document.getElementById('submit-btn').textContent = 'Submit';
+    document.getElementById('interest-form').reset();
 }
 
 // Form Submission
 async function handleFormSubmit(e) {
     e.preventDefault();
 
+    const email = document.getElementById('email').value.trim();
     const formData = {
+        email: email,
         name: document.getElementById('name').value.trim(),
         year: document.getElementById('year').value.trim(),
         state: document.getElementById('state').value,
@@ -36,7 +88,7 @@ async function handleFormSubmit(e) {
         timestamp: new Date().toISOString()
     };
 
-    showMessage('Submitting...', 'success');
+    showMessage(isUpdateMode ? 'Updating...' : 'Submitting...', 'success');
 
     try {
         // Submit to Google Sheets
@@ -50,10 +102,21 @@ async function handleFormSubmit(e) {
         });
 
         // With no-cors, we can't read the response, so we assume success
-        showMessage('Successfully registered! Refreshing list...', 'success');
+        const successMessage = isUpdateMode ?
+            'Successfully updated! Refreshing list...' :
+            'Successfully registered! Refreshing list...';
+        showMessage(successMessage, 'success');
 
-        // Reset form
-        document.getElementById('interest-form').reset();
+        // Save email to localStorage
+        localStorage.setItem('staffRetreatEmail', email);
+
+        // Switch to update mode if not already
+        if (!isUpdateMode) {
+            isUpdateMode = true;
+            document.getElementById('form-title').textContent = 'Update Your Information';
+            document.getElementById('update-mode-notice').style.display = 'block';
+            document.getElementById('submit-btn').textContent = 'Update Info';
+        }
 
         // Reload attendees after a short delay
         setTimeout(() => {
@@ -137,10 +200,12 @@ function filterAttendees() {
     }
 
     // Separate by status
+    const notGoing = filtered.filter(a => a.status === 'not-going');
     const interested = filtered.filter(a => a.status === 'interested');
     const committed = filtered.filter(a => a.status === 'committed');
 
     // Display
+    displayAttendeeList('not-going-list', notGoing);
     displayAttendeeList('interested-list', interested);
     displayAttendeeList('committed-list', committed);
 }
@@ -191,11 +256,11 @@ function escapeHtml(text) {
 // Demo Data (for testing without Google Sheets)
 function loadDemoData() {
     allAttendees = [
-        { name: 'John Doe', year: '2018, 2019', city: 'Denver', state: 'CO', status: 'interested' },
-        { name: 'Jane Smith', year: '2019', city: 'Austin', state: 'TX', status: 'committed' },
-        { name: 'Mike Johnson', year: '2018, 2020', city: 'Seattle', state: 'WA', status: 'committed' },
-        { name: 'Sarah Williams', year: '2020', city: 'Portland', state: 'OR', status: 'interested' },
-        { name: 'Tom Brown', year: '2019, 2021', city: 'Boston', state: 'MA', status: 'interested' }
+        { email: 'john@example.com', name: 'John Doe', year: '2018, 2019', city: 'Denver', state: 'CO', status: 'interested' },
+        { email: 'jane@example.com', name: 'Jane Smith', year: '2019', city: 'Austin', state: 'TX', status: 'committed' },
+        { email: 'mike@example.com', name: 'Mike Johnson', year: '2018, 2020', city: 'Seattle', state: 'WA', status: 'committed' },
+        { email: 'sarah@example.com', name: 'Sarah Williams', year: '2020', city: 'Portland', state: 'OR', status: 'not-going' },
+        { email: 'tom@example.com', name: 'Tom Brown', year: '2019, 2021', city: 'Boston', state: 'MA', status: 'interested' }
     ];
 
     // Extract unique years (handling comma-separated years)
