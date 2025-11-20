@@ -62,12 +62,26 @@ section h2 {
 }
 
 #interest-form {
-    max-width: 600px;
+    max-width: 800px;
     margin: 0 auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .form-group {
     margin-bottom: 20px;
+}
+
+.form-submit-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 15px;
+    align-items: end;
 }
 
 .form-group label {
@@ -416,5 +430,10 @@ section h2 {
 
     .submitted-notice p {
         text-align: center;
+    }
+
+    .form-row,
+    .form-submit-row {
+        grid-template-columns: 1fr;
     }
 }
